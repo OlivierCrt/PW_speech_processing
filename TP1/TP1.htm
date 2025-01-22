@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>2A SRI TAP - TP1</title>
+</head>
+
+<body>
+
+<h1 style="text-align: center;">2A SRI TAP - TP1<br>
+&nbsp; Prétraitement acoustique, Analyse en Composantes Principales et Classification par lois gaussiennes</h1>
+
+
+<h2>Objectifs du TP, savoir :</h2>
+
+<ul>
+<li>paramétrer un signal acoustique,</li>
+<li>manipuler une ACP,</li>
+<li>représenter des données dans des espaces de dimensions différentes,</li>
+<li>estimer les paramètres de lois gausiennes,</li>
+<li>réaliser une classification par cette approche Bayésienne.</li>
+</ul>
+
+
+<h2>Notions Python</h2>
+
+<ul>
+<li>Exemple d'utilisation d'une chaîne de caractères sous <span style="font-family: monospace;">Python</span> :<br>
+<span style="font-family: monospace;">
+dizaine = str((NoFichier + 1) // 10)<br>
+unite = str((NoFichier + 1) % 10)<br>
+nom = 'Signal/' + classe + dizaine + unite + '.wav'
+</span><br><br></li>
+
+<li>La fonction <span style="font-family: monospace;">cov</span> renvoie la matrice de covariance de la matrice où les observations sont disposées en lignes.<br>
+Exemple : soit une matrice de 60x24 (60 observations en dimension 24)<br>
+<span style="font-family: monospace;">numpy.cov(matrice)</span> renvoie une matrice 24x24 où chaque élément (i,j) correspond à la covariance de la dimension i et de la dimension j.<br><br></li>
+
+<li>La fonction <span style="font-family: monospace;">eig</span> renvoie les valeurs propres et les vecteurs propres. <b>Attention, les valeurs ne sont pas triées !</b><br>
+<span style="font-family: monospace;">[Lambda, V] = scipy.linalg.eig(matrice)</span><br>
+<span style="font-family: monospace;">V</span> : vecteurs propres et <span style="font-family: monospace;">Lambda</span> : valeurs propres. <br></li>
+</ul>
+
+
+<h2>Avant de commencer</h2>
+
+<ul>
+<li><b>Récupérer le notebook "notebook_TP1_TAP_NOM_ETUDIANT.ipynb", le renommer avec votre NOM et le compléter !</b></li>
+<li>Récupérer le fichier : <span style="font-family: monospace;">canaux24.py</span>.</li>
+<li>Récupérer également les signaux audio préenregistrés : <span style="font-family: monospace;">voyelles.zip</span></li>
+</ul>
+Il s'agit de fichiers de 1024 échantillons correspondant à 10 voyelles.<br> 
+Pour le début du TP vous vous limiterez à l'utilisation des trois voyelles (classes) identifiées par : 
+'<span style="font-family: monospace;">aa</span>', '<span style="font-family: monospace;">ii</span>' et '<span style="font-family: monospace;">uu</span>' car ces trois voyelles sont facilement identifiable (cf. TP2 de la 1A SRI).<br>
+Pour débuter, vous prendrez uniquement 20 fichiers de chaque classe.<br>
+Les noms de fichiers sont sous la forme : '<span style="font-family: monospace;">aa12.wav</span>'&nbsp; : le nom de la voyelle sur 2 caractères, un nombre compris entre 00 et 99 et l'extension des fichiers WAVE.<br>
+
+
+<h2>Prétraitements élémentaires</h2>
+Travailler avec une dimension de 1024 points n'est pas réaliste et engendrerait de trop nombreux calculs.<br>
+Nous allons réduire cet espace de représentation tout en gardant un maximum d'informations utiles dans le signal.<br>
+La fonction <span style="font-family: monospace;">canaux</span> permet de récupérer les canaux d'énergie selon l'échelle MEL (non linéaire) sur le spectre :
+<span style="font-family: monospace;"><br>
+can = canaux24.canaux(signal,f_ech)</span><br>
+
+<ul>
+<li>Créer une fonction <span style="font-family: monospace;">lecture</span> qui permette de récupérer la matrice des observations.<br>
+<span style="font-family: monospace;">obsaa = lecture('aa', 20)<br> obsuu = lecture('uu', 20)<br> obsii = lecture('ii', 20)</span></li>
+</ul>
+
+
+<h2>PARTIE 1 : Analyse en Composantes Principales</h2>
+
+Le but d'une analyse en composantes principales est de réduire les dimensions.<br>
+Nous allons nous en servir ici pour représenter en 2D, l'espace des paramètres acoustiques, et pouvoir réaliser un tracé sur les deux premiers axes représentatifs (il est plus facile de représenter une observation en 2D qu'en 24D
+!).<br>
+
+Les voyelles peuvent se caractériser selon deux ou trois dimensions assez facilement : suivant les 2 ou 3 premiers axes formantiques (formants <span style="font-family: monospace;">F1 F2 F3</span>). 
+Nous devrions donc arriver à obtenir une représentation fidèle.<br>
+Vous allez donc essayer de vous rapprocher de cette représention. 
+Connaissant <span style="font-style: italic;">a priori</span> la classe des observation, nous allons nous en servir pour illustrer avec des couleurs différentes les différents nuages de points de chaque classe.<br>
+
+<ul>
+<li>Créer une matrice contenant l'ensemble des observations à traiter : <span style="font-family: monospace;">R = np.vstack((obsaa, obsuu, obsii))</span><br></li>
+<li>En utilisant les fonctions <span style="font-family: monospace;">cov</span> et <span style="font-family: monospace;">eig</span>, 
+constituer une matrice de passage qui permette de passer de l'espace de dimension 24 généré par la fonction <span style="font-family: monospace;">canaux</span> dans un espace à deux dimensions correspondant aux deux composantes principales.</li>
+<li>Projeter <span style="font-family: monospace;">R</span> dans ce nouvel espace et effectuer un tracé.</li>
+<li>Lancer l'affichage</li>
+<li>Si vous utilisez les deux vecteurs propres les moins représentatifs pour la matrice de passage, que devient la représentation des nuages ?
+Est-ce qu'une discrimination linéaire est possible ?</li>
+</ul>
+
+
+<h2>PARTIE 2 : Classification par lois gaussiennes</h2>
+
+<ul>
+<li>Charger les données d'apprentissage avec le code suivant : <br>
+<span style="font-family: monospace;">
+f = open('APP.pkl', 'rb')<br>
+dicoAPP = pickle.load(f)<br>
+app_aa = dicoAPP["aa"]<br>
+app_ii = dicoAPP["ii"]<br>
+app_uu = dicoAPP["uu"]<br>
+f.close()<br>
+</span>
+Il s'agit de matrices 80x2 résultant d'une ACP sur une paramétrisation cepstrale (cf. PARTIE 1).</li><br>
+
+<li>Afficher sur une seule figure, en utilisant <span style="font-family: monospace;">subplot(nb_lignes, nb_colonnes, numero_trace)</span>, l'histogramme de chacune des classes : aa, uu et ii. <br>
+Que pouvez-vous conclure ?</li><br>
+
+<li><b>APPRENTISSAGE</b> : estimer les paramètres (moyenne et matrice de covariance) de chaque classe.</li><br>
+
+<li><b>RECONNAISSANCE</b> : écrire une fonction <span style="font-family: monospace;">classer </span> qui renvoie la classe obtenue par maximum de vraisemblance sur les lois gaussiennes estimées sur l'observation fournie en entrée :<br>
+<span style="font-family: monospace;">
+def classer(observation, moyenne_aa, covariance_aa, moyenne_uu, covariance_uu, moyenne_ii, covariance_ii):</span><br><br>
+
+Des observations à tester sont présentes dans le fichier Pickle suivant (à charger comme pour les données d'apprentissage) :
+<span style="font-family: monospace; color: rgb(0, 0, 0);">TST.pkl</span><br>
+
+Exemple de résultat :
+<span style="font-family: monospace;">
+classe = classer(tst_aa[0,:], m_aa, c_aa, m_uu, c_uu, m_ii, c_ii)<br>
+=&gt; no_classe = 1</span></li><br>
+
+<li>Réaliser une fonction qui effectue tous les tests de classification et qui affiche une matrice de confusion et un taux de reconnaissance et commenter les résultats obtenus.<br>
+
+<span style="font-family: monospace; color: rgb(0, 0, 0);">
+matrice_confusion, taux_reco = tout_tester(tst_aa, tst_uu, tst_ii, m_aa, c_aa, m_uu, c_uu, m_ii, c_ii)</span></li><br>
+
+</ul>
+
+</body>
+
+</html>
