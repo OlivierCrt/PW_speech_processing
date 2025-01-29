@@ -1,8 +1,8 @@
-import numpy as np
-import scipy.io.wavfile as wav
+import numpy as np# type: ignore
+import scipy.io.wavfile as wav # type: ignore
 from canaux24 import canaux
-from scipy import linalg
-import matplotlib.pyplot as plt
+from scipy import linalg# type: ignore
+import matplotlib.pyplot as plt# type: ignore
 import pickle
 
 
