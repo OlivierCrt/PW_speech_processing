@@ -1,8 +1,8 @@
-import numpy as np# type: ignore
-import scipy.io.wavfile as wav # type: ignore
+import numpy as np
+import scipy.io.wavfile as wav
 from canaux24 import canaux
-from scipy import linalg# type: ignore
-import matplotlib.pyplot as plt# type: ignore
+from scipy import linalg
+import matplotlib.pyplot as plt
 import pickle
 
 
@@ -272,10 +272,6 @@ tst_ii = dicoTST["ii"]
 tst_uu = dicoTST["uu"]
 ft.close()
 
-# Vérifier leurs dimensions
-# à compléter
-
-
 
 # Exemple de résultat : 
 classe = classer(tst_aa[0,:], m_aa, c_aa, m_uu, c_uu, m_ii, c_ii)
@@ -319,4 +315,4 @@ print("mat confiance:\n",mat_conf)
 print("score: ",score)
 
 # Commenter les résultats obtenus
-# c est parfait
+# C'est parfait!
