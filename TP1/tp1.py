@@ -316,3 +316,49 @@ print("score: ",score)
 
 # Commenter les résultats obtenus
 # C'est parfait!
+###########################
+# qcm tp
+###################
+
+
+
+# Charger les données d'évaluation
+fic_e = open('EVAL.pkl', 'rb')
+dicoEVAL = pickle.load(fic_e)
+eval_aa = dicoEVAL["aa"]
+eval_ii = dicoEVAL["ii"]
+eval_uu = dicoEVAL["uu"]
+fic_e.close()
+
+# Charger les paramètres appris
+f = open('APP.pkl', 'rb')
+dicoAPP = pickle.load(f)
+app_aa = dicoAPP["aa"]
+app_ii = dicoAPP["ii"]
+app_uu = dicoAPP["uu"]
+f.close()
+
+# Moyennes et covariances
+m_aa = np.mean(app_aa, axis=0)
+m_uu = np.mean(app_uu, axis=0)
+m_ii = np.mean(app_ii, axis=0)
+c_aa = np.cov(app_aa, rowvar=False)
+c_uu = np.cov(app_uu, rowvar=False)
+c_ii = np.cov(app_ii, rowvar=False)
+
+# Tester la classification sur l'ensemble de test EVAL
+mat_conf_eval, taux_reco_eval = tout_tester(eval_aa, eval_uu, eval_ii, m_aa, c_aa, m_uu, c_uu, m_ii, c_ii)
+
+# Calcul du taux d'erreur
+taux_erreur_eval = (1 - taux_reco_eval) * 100
+
+print("Matrice de confusion sur  EVAL:\n", mat_conf_eval)
+print("Taux d'erreur obtenu:", taux_erreur_eval, "%")
+
+#resultats
+"""
+Matrice de confusion sur l'ensemble de test EVAL:
+ [[92.  2.  1.]
+ [ 0. 48. 50.]
+ [ 0.  0. 90.]]
+Taux d'erreur obtenu: 18.727915194346288 %"""

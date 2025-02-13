@@ -184,7 +184,7 @@ chemin_app = "/home/python/PW_speech_processing/TP2/APP"         # Exemple : "/h
 chemin_labels = "/home/python/PW_speech_processing/TP2/LABELS"   # Exemple : "/home/user/LABELS"
 
 # Appliquer l'étiquetage sur tous les fichiers du répertoire 'APP'
-etiquetage_total(chemin_app=chemin_app, chemin_labels=chemin_labels, nb_bits=q, taille_fenetre=1024, seuil=seuil)
+# etiquetage_total(chemin_app=chemin_app, chemin_labels=chemin_labels, nb_bits=q, taille_fenetre=1024, seuil=seuil)
 
 
 
@@ -253,7 +253,7 @@ def parametrisation_total(nb_bits, taille_fenetre, nbe_coef, nbe_loc, nbe_fic, c
 
 chemin_app = "/home/python/PW_speech_processing/TP2/APP"  
 chemin_mfcc = "/home/python/PW_speech_processing/TP2/MFCC"
-parametrisation_total(q, taille_fenetre, nb_MFCC, nb_locuteur, nb_fic_app,chemin_app=chemin_app,chemin_mfcc=chemin_mfcc)
+# parametrisation_total(q, taille_fenetre, nb_MFCC, nb_locuteur, nb_fic_app,chemin_app=chemin_app,chemin_mfcc=chemin_mfcc)
 
 
 
@@ -309,9 +309,6 @@ def affectation(REP_LAB, REP_MFCC, nbe_coef, nbe_loc, nbe_fic, locuteur):
 
 
 
-#################
-# APPRENTISSAGE #
-#################
 
 # Affectation
 affectation('/home/python/PW_speech_processing/TP2/LABELS', '/home/python/PW_speech_processing/TP2/MFCC', nb_MFCC, nb_locuteur, nb_fic_app, locuteur_cible)
@@ -319,10 +316,115 @@ affectation('/home/python/PW_speech_processing/TP2/LABELS', '/home/python/PW_spe
 # EM (appelant VQ) pour le modèle du "monde"
 d_monde = np.loadtxt('/home/python/PW_speech_processing/TP2/MFCC/monde.mfcc')
 #------------------------------------------------------------> A compléter...
-print(monde.weights_, d_monde.means_, d_monde.covariances_)
+
+# Entraînement du modèle GM pour le "monde"
+gmm_monde = em(n_components=nbe_gauss, covariance_type='full', max_iter=200, random_state=0)
+gmm_monde.fit(d_monde)
+
+# Affichage des paramètres du modèle GM pour le "monde"
+print("Paramètres du modèle pour le monde :")
+print("Poids :", gmm_monde.weights_)
+print("Moyennes :", gmm_monde.means_)
+print("Covariances :", gmm_monde.covariances_)
 
 # EM (MAP) pour le modèle du "locuteur"
 #-----------------------------------------------------------> A compléter...
 
+d_locuteur = np.loadtxt('/home/python/PW_speech_processing/TP2/MFCC/L' + str(locuteur_cible) + '.mfcc')
 
+# Entraînement du modèle GMM pour le "locuteur"
+gmm_locuteur = em(n_components=nbe_gauss, covariance_type='full', max_iter=200, random_state=0)
+gmm_locuteur.fit(d_locuteur)
+
+# Affichage des paramètres du modèle GMM pour le "locuteur"
+print("\nParamètres du modèle GM pour le locuteur :")
+print("Poids :", gmm_locuteur.weights_)
+print("Moyennes :", gmm_locuteur.means_)
+print("Covariances :", gmm_locuteur.covariances_)
+
+
+################################
+    # 5 - RECONNAISSANCE #
+################################
+
+
+# Tests sur tous les fichiers du répertoire 'WAV/RECO'
+def tests_total(nbe_loc, nb_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, seuil):
+    """
+    Effectue la reconnaissance des fichiers audio inconnus dans le répertoire 'WAV/RECO'.
+    
+    :param nbe_loc: Nombre de locuteurs
+    :param nb_fic: Nombre de fichiers par locuteur
+    :param nb_bits: Nombre de bits de quantification
+    :param taille_fenetre: Taille de la fenêtre d'analyse
+    :param nbe_coef: Nombre de coefficients cepstraux (MFCC)
+    :param monde: Modèle GMM pour le "monde"
+    :param loc: Modèle GMM pour le "locuteur cible"
+    :param seuil: Seuil de décision pour la reconnaissance
+    :return: Taux de reconnaissance pour chaque fichier
+    """
+    # Chemin du répertoire contenant les fichiers audio inconnus
+    chemin_reco = "/home/python/PW_speech_processing/TP2/RECO"
+    
+    # Vérifier si le répertoire existe
+    if not os.path.exists(chemin_reco):
+        raise FileNotFoundError(f"Le répertoire '{chemin_reco}' n'existe pas.")
+    
+    # Liste des fichiers audio dans le répertoire
+    fichiers_audio = [f for f in os.listdir(chemin_reco) if f.endswith('.wav')]
+    
+    # Initialisation des résultats
+    taux_reconnaissance = []
+    
+    # Boucle sur tous les fichiers audio inconnus
+    for fichier in fichiers_audio:
+        chemin_fichier = os.path.join(chemin_reco, fichier)
+        
+        # Lecture du fichier audio
+        freq, duree, signal_normalise = lecture(chemin_fichier, nb_bits)
+        
+        # Calcul des MFCC
+        mfcc = parametrisation(signal_normalise, taille_fenetre, nbe_coef)
+        
+        # Calcul des scores de vraisemblance pour le modèle "monde" et le modèle "locuteur"
+        score_monde = monde.score(mfcc)  # Score de vraisemblance pour le modèle "monde"
+        score_locuteur = loc.score(mfcc)  # Score de vraisemblance pour le modèle "locuteur"
+        
+        # Décision de reconnaissance
+        if (score_locuteur - score_monde) > seuil:
+            reconnaissance = 1  # Le locuteur est reconnu
+        else:
+            reconnaissance = 0  # Le locuteur n'est pas reconnu
+        
+        # Ajout du résultat à la liste
+        taux_reconnaissance.append(reconnaissance)
+        
+        # Affichage des résultats pour chaque fichier
+        print(f"Fichier : {fichier}")
+        print(f"Score monde : {score_monde}")
+        print(f"Score locuteur : {score_locuteur}")
+        print(f"Reconnaissance : {'Reconnu' if reconnaissance == 1 else 'Non reconnu'}")
+        print("-" * 40)
+    
+    # Calcul du taux de reconnaissance global
+    taux_global = np.mean(taux_reconnaissance) * 100
+    print(f"Taux de reconnaissance global : {taux_global:.2f}%")
+    
+    return taux_reconnaissance
+
+
+# Paramètres
+nbe_loc = 10
+nb_fic = 8
+nb_bits = 16
+taille_fenetre = 1024
+nbe_coef = 8
+seuil = 0.5  # À ajuster en fonction des données
+
+# Modèles GMM (monde et locuteur)
+monde = gmm_monde  # Modèle GMM pour le "monde"
+loc = gmm_locuteur  # Modèle GMM pour le "locuteur cible"
+
+# Appel de la fonction
+resultats = tests_total(nbe_loc, nb_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, seuil)
 
