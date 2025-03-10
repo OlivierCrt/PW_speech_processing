@@ -101,7 +101,7 @@ nb_fic_app = 8
 seuil = 0.0001
 q = 16
 nb_MFCC = 8
-locuteur_cible = 1
+locuteur_cible = 3
 nbe_gauss = 1
 
 # Lecture d'un fichier
@@ -348,20 +348,19 @@ print("Covariances :", gmm_locuteur.covariances_)
 ################################
 
 
-# Tests sur tous les fichiers du répertoire 'WAV/RECO'
-def tests_total(nbe_loc, nb_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, seuil):
+def tests_total(nbe_loc, nbe_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, seuil):
     """
-    Effectue la reconnaissance des fichiers audio inconnus dans le répertoire 'WAV/RECO'.
+    Effectue la reconnaissance des fichiers audio inconnus dans le répertoire 'RECO'.
     
     :param nbe_loc: Nombre de locuteurs
-    :param nb_fic: Nombre de fichiers par locuteur
+    :param nbe_fic: Nombre de fichiers par locuteur
     :param nb_bits: Nombre de bits de quantification
     :param taille_fenetre: Taille de la fenêtre d'analyse
     :param nbe_coef: Nombre de coefficients cepstraux (MFCC)
     :param monde: Modèle GMM pour le "monde"
     :param loc: Modèle GMM pour le "locuteur cible"
     :param seuil: Seuil de décision pour la reconnaissance
-    :return: Taux de reconnaissance pour chaque fichier
+    :return: Résultats de reconnaissance pour chaque fichier
     """
     # Chemin du répertoire contenant les fichiers audio inconnus
     chemin_reco = "/home/python/PW_speech_processing/TP2/RECO"
@@ -374,7 +373,7 @@ def tests_total(nbe_loc, nb_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, 
     fichiers_audio = [f for f in os.listdir(chemin_reco) if f.endswith('.wav')]
     
     # Initialisation des résultats
-    taux_reconnaissance = []
+    resultats = []
     
     # Boucle sur tous les fichiers audio inconnus
     for fichier in fichiers_audio:
@@ -383,48 +382,78 @@ def tests_total(nbe_loc, nb_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, 
         # Lecture du fichier audio
         freq, duree, signal_normalise = lecture(chemin_fichier, nb_bits)
         
+        # Étiquetage pour identifier les zones de parole
+        etiquettes = etiquetage(signal_normalise, taille_fenetre, 0.0001)  # Utiliser le même seuil que pour l'apprentissage
+        
         # Calcul des MFCC
         mfcc = parametrisation(signal_normalise, taille_fenetre, nbe_coef)
         
-        # Calcul des scores de vraisemblance pour le modèle "monde" et le modèle "locuteur"
-        score_monde = monde.score(mfcc)  # Score de vraisemblance pour le modèle "monde"
-        score_locuteur = loc.score(mfcc)  # Score de vraisemblance pour le modèle "locuteur"
+        # Sélection des trames correspondant à la parole
+        indices_parole = np.where(etiquettes == 1)[0]
         
-        # Décision de reconnaissance
-        if (score_locuteur - score_monde) > seuil:
-            reconnaissance = 1  # Le locuteur est reconnu
-        else:
-            reconnaissance = 0  # Le locuteur n'est pas reconnu
+        # Vérification qu'il y a des trames de parole détectées
+        if len(indices_parole) == 0:
+            print(f"Aucune trame de parole détectée dans {fichier}, impossible de faire la reconnaissance")
+            resultats.append({'fichier': fichier, 'reconnaissance': 'Non reconnu', 'score': 0.0})
+            continue
+        
+        # Sélection des MFCC correspondant aux trames de parole
+        mfcc_parole = mfcc[indices_parole]
+        
+        # Calcul des scores de vraisemblance pour chaque trame de parole
+        # Utilisation de score_samples qui retourne la log-vraisemblance pour chaque échantillon
+        scores_monde = monde.score_samples(mfcc_parole)
+        scores_locuteur = loc.score_samples(mfcc_parole)
+        
+        # Calcul du rapport de vraisemblance pour chaque trame
+        rapports = scores_locuteur - scores_monde
+        
+        # Décision par vote majoritaire pour chaque trame
+        decisions_trames = (rapports > seuil).astype(int)
+        votes_positifs = np.sum(decisions_trames)
+        
+        # Score de confiance: proportion de votes positifs
+        score_confiance = votes_positifs / len(decisions_trames) if len(decisions_trames) > 0 else 0
+        
+        # Décision finale par vote majoritaire
+        reconnaissance = "Reconnu" if score_confiance > 0.5 else "Non reconnu"
         
         # Ajout du résultat à la liste
-        taux_reconnaissance.append(reconnaissance)
+        resultats.append({
+            'fichier': fichier,
+            'reconnaissance': reconnaissance,
+            'score': score_confiance
+        })
         
         # Affichage des résultats pour chaque fichier
         print(f"Fichier : {fichier}")
-        print(f"Score monde : {score_monde}")
-        print(f"Score locuteur : {score_locuteur}")
-        print(f"Reconnaissance : {'Reconnu' if reconnaissance == 1 else 'Non reconnu'}")
+        print(f"Nombre de trames de parole : {len(indices_parole)}")
+        print(f"Votes positifs : {votes_positifs} / {len(decisions_trames)}")
+        print(f"Score de confiance : {score_confiance:.4f}")
+        print(f"Reconnaissance : {reconnaissance}")
         print("-" * 40)
     
-    # Calcul du taux de reconnaissance global
-    taux_global = np.mean(taux_reconnaissance) * 100
-    print(f"Taux de reconnaissance global : {taux_global:.2f}%")
+    # Calcul des statistiques globales
+    nb_acceptes = sum(1 for r in resultats if r['reconnaissance'] == "Reconnu")
+    print(f"Nombre de fichiers acceptés : {nb_acceptes} / {len(resultats)}")
     
-    return taux_reconnaissance
+    # Vérification des résultats (si on connaît déjà qui est le locuteur cible)
+    fichiers_cible = [f for f in fichiers_audio if f'L{locuteur_cible}_' in f]
+    reconnaissance_correcte = 0
+    
+    for r in resultats:
+        # Vérifier si c'est un fichier du locuteur cible
+        est_cible = any(cible in r['fichier'] for cible in fichiers_cible)
+        est_reconnu = r['reconnaissance'] == "Reconnu"
+        
+        # Vérifier si la reconnaissance est correcte
+        if (est_cible and est_reconnu) or (not est_cible and not est_reconnu):
+            reconnaissance_correcte += 1
+    
+    taux_correcte = (reconnaissance_correcte / len(resultats)) * 100
+    print(f"Taux de reconnaissance correcte : {taux_correcte:.2f}%")
+    
+    return resultats
 
-
-# Paramètres
-nbe_loc = 10
-nb_fic = 8
-nb_bits = 16
-taille_fenetre = 1024
-nbe_coef = 8
-seuil = 0.5  # À ajuster en fonction des données
-
-# Modèles GMM (monde et locuteur)
-monde = gmm_monde  # Modèle GMM pour le "monde"
-loc = gmm_locuteur  # Modèle GMM pour le "locuteur cible"
-
-# Appel de la fonction
-resultats = tests_total(nbe_loc, nb_fic, nb_bits, taille_fenetre, nbe_coef, monde, loc, seuil)
-
+# Exemple d'utilisation de la fonction tests_total
+resultats = tests_total(1, nb_fic_app, q, taille_fenetre, nb_MFCC, gmm_monde, gmm_locuteur, 0.0)
