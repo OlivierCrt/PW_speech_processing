@@ -1,0 +1,31 @@
+%start OPERATION
+OPERATION -> CALCUL_A_FAIRE[INTERP=?i]
+CALCUL_A_FAIRE[INTERP=(?n1+?o+?n2)] -> NOMBRE[SEM=?n1] OPERATEUR[SEM=?o] NOMBRE[SEM=?n2]
+
+############ LEXIQUE SEMANTIQUE et REGLES LEXICALES ASSOCIEES
+
+## CATEGORIE CHIFFRE de 0 à 9
+
+CHIFFRE[SEM='0'] -> 'zero'
+CHIFFRE[SEM='1'] -> 'un'
+CHIFFRE[SEM='2'] -> 'deux'
+CHIFFRE[SEM='3'] -> 'trois'
+CHIFFRE[SEM='4'] -> 'quatre'
+CHIFFRE[SEM='5'] -> 'cinq'
+CHIFFRE[SEM='6'] -> 'six'
+CHIFFRE[SEM='7'] -> 'sept'
+CHIFFRE[SEM='8'] -> 'huit'
+CHIFFRE[SEM='9'] -> 'neuf'
+
+## CATEGORIE DIZAINE 10, 20, ...
+DIZAINE[SEM='10'] -> 'dix'
+DIZAINE[SEM='20'] -> 'vingt'
+
+
+## CATEGORIE NOMBRE
+NOMBRE[SEM=?sem] -> CHIFFRE[SEM=?sem]
+NOMBRE[SEM=?sem] -> DIZAINE[SEM=?sem]
+
+## CATEGORIE OPERATION
+OPERATEUR[SEM='+'] -> 'plus'
+OPERATEUR[SEM='-'] -> 'moins'

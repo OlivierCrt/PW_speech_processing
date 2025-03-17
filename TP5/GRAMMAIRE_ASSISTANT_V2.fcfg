@@ -1,0 +1,41 @@
+%start OPERATION
+OPERATION -> CALCUL_A_FAIRE[INTERP=?i]
+CALCUL_A_FAIRE[INTERP=(?n1+?o+?n2)] -> NOMBRE[SEM=?n1] OPERATEUR[SEM=?o] NOMBRE[SEM=?n2]
+
+############ LEXIQUE SEMANTIQUE et REGLES LEXICALES ASSOCIEES
+
+## CATEGORIE CHIFFRE de 0 à 9
+CHIFFRE[SEM='0'] -> '0' | 'zero'
+CHIFFRE[SEM='1'] -> '1' | 'un'
+CHIFFRE[SEM='2'] -> '2' | 'deux'
+CHIFFRE[SEM='3'] -> '3' | 'trois'
+CHIFFRE[SEM='4'] -> '4' | 'quatre'
+CHIFFRE[SEM='5'] -> '5' | 'cinq'
+CHIFFRE[SEM='6'] -> '6' | 'six'
+CHIFFRE[SEM='7'] -> '7' | 'sept'
+CHIFFRE[SEM='8'] -> '8' | 'huit'
+CHIFFRE[SEM='9'] -> '9' | 'neuf'
+
+## CATEGORIE DIZAINE 10, 20, ...
+DIZAINE[SEM='10'] -> '10' | 'dix'
+DIZAINE[SEM='20'] -> '20' | 'vingt'
+DIZAINE[SEM='30'] -> '30' | 'trente'
+DIZAINE[SEM='40'] -> '40' | 'quarante'
+DIZAINE[SEM='50'] -> '50' | 'cinquante'
+DIZAINE[SEM='60'] -> '60' | 'soixante'
+DIZAINE[SEM='70'] -> '70' | 'soixante_dix'
+DIZAINE[SEM='80'] -> '80' | 'quatre_vingt'
+DIZAINE[SEM='90'] -> '90' | 'quatre_vingt_dix'
+
+## CATEGORIE NOMBRE
+NOMBRE[SEM=?sem] -> CHIFFRE[SEM=?sem]
+NOMBRE[SEM=?sem] -> DIZAINE[SEM=?sem]
+NOMBRE[SEM='15'] -> '15' | 'quinze'
+NOMBRE[SEM='100'] -> '100' | 'cent'
+
+## CATEGORIE OPERATION
+OPERATEUR[SEM='+'] -> '+' | 'plus'
+OPERATEUR[SEM='-'] -> '-' | 'moins'
+OPERATEUR[SEM='/'] -> '/' | 'divisé_par'
+OPERATEUR[SEM='*'] -> '*' | 'multiplié_par' | 'fois'
+OPERATEUR[SEM='^'] -> '^' | 'puissance'
